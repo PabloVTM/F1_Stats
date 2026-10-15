@@ -25,7 +25,6 @@ def test_calendar():
     assert "rnd" in r
     assert "name" in r
     assert "date" in r
-    assert "sessions" in r
 
 
 def test_driver_standings():

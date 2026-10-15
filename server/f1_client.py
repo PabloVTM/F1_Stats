@@ -73,44 +73,11 @@ async def get_calendar(year: int | None = None) -> list[dict[str, Any]]:
 
     result = []
     for r in races:
-        sessions = {
-            "fp1": _parse_dt(
-                (r.get("FirstPractice") or {}).get("date", ""),
-                (r.get("FirstPractice") or {}).get("time"),
-            ),
-            "fp2": _parse_dt(
-                (r.get("SecondPractice") or {}).get("date", ""),
-                (r.get("SecondPractice") or {}).get("time"),
-            ),
-            "fp3": _parse_dt(
-                (r.get("ThirdPractice") or {}).get("date", ""),
-                (r.get("ThirdPractice") or {}).get("time"),
-            ),
-            "qual": _parse_dt(
-                (r.get("Qualifying") or {}).get("date", ""),
-                (r.get("Qualifying") or {}).get("time"),
-            ),
-        }
-        if r.get("Sprint"):
-            sessions["sprint"] = _parse_dt(
-                r["Sprint"].get("date", ""), r["Sprint"].get("time")
-            )
-        if r.get("SprintQualifying"):
-            sessions["sq"] = _parse_dt(
-                r["SprintQualifying"].get("date", ""),
-                r["SprintQualifying"].get("time"),
-            )
-
-        race_dt = _parse_dt(r.get("date", ""), r.get("time"))
-
-        sessions["race"] = race_dt
-
         result.append(
             {
                 "rnd": _to_int(r.get("round", 0)),
                 "name": r.get("raceName", ""),
-                "date": race_dt,
-                "sessions": {k: v for k, v in sessions.items() if v},
+                "date": (r.get("date") or "")[:10],
             }
         )
     return result
