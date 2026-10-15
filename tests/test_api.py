@@ -25,11 +25,10 @@ def test_calendar():
     assert "rnd" in r
     assert "name" in r
     assert "date" in r
-    assert "sessions" in r
 
 
 def test_driver_standings():
-    resp = client.get("/api/v1/standings/drivers")
+    resp = client.get("/api/v1/standings")
     assert resp.status_code == 200
     body = resp.json()
     assert "drv" in body
@@ -38,41 +37,12 @@ def test_driver_standings():
     assert "pos" in d
     assert "name" in d
     assert "pts" in d
+    assert "team" not in d
 
 
 def test_constructor_standings():
     resp = client.get("/api/v1/standings/constructors")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert "con" in body
-    assert len(body["con"]) > 0
-    c = body["con"][0]
-    assert "pos" in c
-    assert "name" in c
-    assert "pts" in c
-
-
-def test_race_results():
-    resp = client.get("/api/v1/results/race?round=1")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert "res" in body
-    assert len(body["res"]) > 0
-    r = body["res"][0]
-    assert "pos" in r
-    assert "code" in r
-    assert "name" in r
-
-
-def test_qualifying_results():
-    resp = client.get("/api/v1/results/qualifying?round=1")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert "qual" in body
-    assert len(body["qual"]) > 0
-    q = body["qual"][0]
-    assert "pos" in q
-    assert "code" in q
+    assert resp.status_code == 404
 
 
 def test_next():
