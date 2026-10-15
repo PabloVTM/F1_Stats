@@ -2,7 +2,11 @@
 
 Base URL : `http://<serveur>:8000`
 
-Toutes les réponses sont en JSON. Les champs utilisent des clés courtes pour minimiser la taille à parser par l'ESP32.
+Toutes les réponses sont en JSON. Les clés sont courtes pour minimiser la taille à parser par l'ESP32.
+
+**Rate limit :** 30 requêtes / minute / IP (hors `/api/v1/health`).
+
+**Docs interactives (`/docs`) désactivées par défaut** — définir la variable d'environnement `F1_ENABLE_DOCS=1` pour les activer.
 
 ---
 
@@ -24,7 +28,7 @@ GET /api/v1/health
 | Champ | Type | Description |
 |---|---|---|
 | `ok` | bool | Toujours `true` |
-| `ts` | string | Timestamp ISO 8601 |
+| `ts` | string | Timestamp ISO 8601 (UTC) |
 
 ---
 
@@ -38,7 +42,7 @@ GET /api/v1/calendar?year=2026
 
 | Nom | Type | Défaut | Description |
 |---|---|---|---|
-| `year` | int | année courante | Saison souhaitée |
+| `year` | int (1950–2100) | année courante | Saison souhaitée |
 
 **Réponse :**
 
@@ -48,14 +52,7 @@ GET /api/v1/calendar?year=2026
     {
       "rnd": 1,
       "name": "Australian Grand Prix",
-      "date": "2026-03-08T04:00:00+00:00",
-      "sessions": {
-        "fp1": "2026-03-06T01:30:00+00:00",
-        "fp2": "2026-03-06T05:00:00+00:00",
-        "fp3": "2026-03-07T01:30:00+00:00",
-        "qual": "2026-03-07T05:00:00+00:00",
-        "race": "2026-03-08T04:00:00+00:00"
-      }
+      "date": "2026-03-08"
     }
   ]
 }
@@ -65,24 +62,11 @@ GET /api/v1/calendar?year=2026
 |---|---|---|
 | `rnd` | int | Numéro du round |
 | `name` | string | Nom du Grand Prix |
-| `date` | string | Date/heure de la course (ISO 8601) |
-| `sessions` | object | Toutes les séances du weekend |
-
-**Sessions possibles :**
-
-| Clé | Séance |
-|---|---|
-| `fp1` | Essais libres 1 |
-| `fp2` | Essais libres 2 |
-| `fp3` | Essais libres 3 |
-| `qual` | Qualifications |
-| `sprint` | Sprint (weekend sprint seulement) |
-| `sq` | Qualifs du sprint (weekend sprint seulement) |
-| `race` | Course |
+| `date` | string | Date de la course (`YYYY-MM-DD`) |
 
 ---
 
-## Prochain weekend
+## Prochain Grand Prix
 
 ```
 GET /api/v1/next?year=2026
@@ -92,41 +76,44 @@ GET /api/v1/next?year=2026
 
 | Nom | Type | Défaut | Description |
 |---|---|---|---|
-| `year` | int | année courante | Saison |
+| `year` | int (1950–2100) | année courante | Saison |
 
-**Réponse :** idem calendrier mais pour un seul round.
+**Réponse :** même structure qu'une entrée de `cal`.
 
 ```json
 {
   "next": {
     "rnd": 18,
     "name": "United States Grand Prix",
-    "date": "2026-10-25T20:00:00+00:00",
-    "sessions": {
-      "fp1": "2026-10-23T17:30:00+00:00",
-      "fp2": "2026-10-23T21:00:00+00:00",
-      "fp3": "2026-10-24T17:30:00+00:00",
-      "qual": "2026-10-24T21:00:00+00:00",
-      "race": "2026-10-25T20:00:00+00:00"
-    }
+    "date": "2026-10-25"
   }
 }
 ```
+
+> **Comportement :** la comparaison se fait sur la date (UTC) uniquement.
+> Un GP qui a lieu aujourd'hui reste donc « next » jusqu'à minuit UTC,
+> même si la course est terminée.
+>
+> **Hors saison :** si tous les rounds de la saison sont passés et qu'aucune
+> année n'est explicitement demandée, le **1er GP de la saison suivante** est
+> renvoyé (fallback sur le dernier GP de la saison si le calendrier N+1 est
+> indisponible). Avec `?year=` explicite, le dernier round de cette saison
+> est renvoyé.
 
 ---
 
 ## Classement pilotes
 
 ```
-GET /api/v1/standings/drivers?year=2026&round=20
+GET /api/v1/standings?year=2026&round=20
 ```
 
 **Paramètres :**
 
 | Nom | Type | Défaut | Description |
 |---|---|---|---|
-| `year` | int | année courante | Saison |
-| `round` | int | dernier round connu | Arrêter au round N |
+| `year` | int (1950–2100) | année courante | Saison |
+| `round` | int (1–30) | dernier round connu | Classement après le round N |
 
 **Réponse :**
 
@@ -135,8 +122,7 @@ GET /api/v1/standings/drivers?year=2026&round=20
   "drv": [
     {
       "pos": 1,
-      "name": "Andrea Kimi Antonelli",
-      "team": "Mercedes",
+      "name": "A. Antonelli",
       "pts": 340
     }
   ]
@@ -146,159 +132,8 @@ GET /api/v1/standings/drivers?year=2026&round=20
 | Champ | Type | Description |
 |---|---|---|
 | `pos` | int | Position au classement |
-| `name` | string | Prénom + Nom |
-| `team` | string | Équipe |
+| `name` | string | Initiale du prénom + nom (`M. Verstappen`) |
 | `pts` | int | Points |
-
----
-
-## Classement constructeurs
-
-```
-GET /api/v1/standings/constructors?year=2026&round=20
-```
-
-**Paramètres :**
-
-| Nom | Type | Défaut | Description |
-|---|---|---|---|
-| `year` | int | année courante | Saison |
-| `round` | int | dernier round connu | Arrêter au round N |
-
-**Réponse :**
-
-```json
-{
-  "con": [
-    {
-      "pos": 1,
-      "name": "Mercedes",
-      "pts": 478
-    }
-  ]
-}
-```
-
-| Champ | Type | Description |
-|---|---|---|
-| `pos` | int | Position |
-| `name` | string | Nom de l'écurie |
-| `pts` | int | Points |
-
----
-
-## Résultats d'une course
-
-```
-GET /api/v1/results/race?year=2026&round=17
-```
-
-**Paramètres :**
-
-| Nom | Type | Défaut | Description |
-|---|---|---|---|
-| `year` | int | année courante | Saison |
-| `round` | int | *obligatoire* | Numéro du round |
-
-**Réponse :**
-
-```json
-{
-  "res": [
-    {
-      "pos": 1,
-      "code": "VER",
-      "name": "Max Verstappen",
-      "team": "Red Bull",
-      "grid": 1,
-      "laps": 62,
-      "status": "Finished",
-      "time": "1:42:00.785"
-    },
-    {
-      "pos": 2,
-      "code": "LEC",
-      "name": "Charles Leclerc",
-      "team": "Ferrari",
-      "grid": 2,
-      "laps": 62,
-      "status": "Finished",
-      "time": "+7.335"
-    }
-  ]
-}
-```
-
-| Champ | Type | Description |
-|---|---|---|
-| `pos` | int | Position d'arrivée |
-| `code` | string | Code pilote |
-| `name` | string | Pilote |
-| `team` | string | Équipe |
-| `grid` | int | Position de départ |
-| `laps` | int | Tours parcourus |
-| `status` | string | Statut (Finished / DNF / DNS / …) |
-| `time` | string | Temps total ou écart au leader |
-
----
-
-## Résultats des qualifications
-
-```
-GET /api/v1/results/qualifying?year=2026&round=17
-```
-
-**Paramètres :**
-
-| Nom | Type | Défaut | Description |
-|---|---|---|---|
-| `year` | int | année courante | Saison |
-| `round` | int | *obligatoire* | Numéro du round |
-
-**Réponse :**
-
-```json
-{
-  "qual": [
-    {
-      "pos": 1,
-      "code": "VER",
-      "name": "Max Verstappen",
-      "team": "Red Bull",
-      "q1": "1:32.165",
-      "q2": "1:31.782",
-      "q3": "1:31.056"
-    }
-  ]
-}
-```
-
-| Champ | Type | Description |
-|---|---|---|
-| `pos` | int | Position |
-| `code` | string | Code pilote |
-| `name` | string | Pilote |
-| `team` | string | Équipe |
-| `q1` | string | Temps Q1 (vide si pas de temps) |
-| `q2` | string | Temps Q2 (vide si éliminé) |
-| `q3` | string | Temps Q3 (vide si éliminé) |
-
----
-
-## Résultats du sprint
-
-```
-GET /api/v1/results/sprint?year=2026&round=17
-```
-
-**Paramètres :**
-
-| Nom | Type | Défaut | Description |
-|---|---|---|---|
-| `year` | int | année courante | Saison |
-| `round` | int | *obligatoire* | Numéro du round |
-
-**Réponse :** identique à `results/race`.
 
 ---
 
@@ -308,22 +143,35 @@ GET /api/v1/results/sprint?year=2026&round=17
 |---|---|
 | 200 | OK |
 | 404 | Endpoint inconnu |
-| 503 | Erreur API F1 amont (hors ligne ?) |
+| 422 | Paramètre invalide (`year` hors 1950–2100, `round` hors 1–30) |
+| 429 | Rate limit dépassé |
+| 503 | Erreur API F1 amont |
 
-Les erreurs 503 renvoient :
+**429 :**
 
 ```json
 {
-  "detail": "Erreur API F1: <message>"
+  "err": "rate_limit",
+  "msg": "Trop de requêtes, réessaie dans quelques secondes"
+}
+```
+
+**503 :** le détail de l'erreur amont n'est jamais exposé au client (il est dans les logs du serveur).
+
+```json
+{
+  "detail": "Service F1 temporairement indisponible"
 }
 ```
 
 ---
 
-## Document interactive (Swagger)
+## Documentation interactive (Swagger)
 
-FastAPI génère automatiquement une doc interactive :
+**Désactivée par défaut.** Pour l'activer, définir la variable d'environnement :
 
 ```
-http://<serveur>:8000/docs
+F1_ENABLE_DOCS=1
 ```
+
+Puis : `http://<serveur>:8000/docs`
