@@ -45,29 +45,6 @@ def test_constructor_standings():
     assert resp.status_code == 404
 
 
-def test_race_results():
-    resp = client.get("/api/v1/results/race?round=1")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert "res" in body
-    assert len(body["res"]) > 0
-    r = body["res"][0]
-    assert "pos" in r
-    assert "code" in r
-    assert "name" in r
-
-
-def test_qualifying_results():
-    resp = client.get("/api/v1/results/qualifying?round=1")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert "qual" in body
-    assert len(body["qual"]) > 0
-    q = body["qual"][0]
-    assert "pos" in q
-    assert "code" in q
-
-
 def test_next():
     resp = client.get("/api/v1/next")
     assert resp.status_code == 200

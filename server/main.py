@@ -8,9 +8,6 @@ from fastapi import FastAPI, HTTPException
 from server.f1_client import (
     get_calendar,
     get_driver_standings,
-    get_qualifying_results,
-    get_race_results,
-    get_sprint_results,
 )
 from server.rate_limit import RateLimitMiddleware
 
@@ -53,33 +50,6 @@ async def driver_standings(year: int | None = None, round: int | None = None):
     """Classement pilotes (position, nom, points)."""
     try:
         return {"drv": await get_driver_standings(year, round)}
-    except Exception as e:
-        raise HTTPException(503, f"Erreur API F1: {e}")
-
-
-@app.get("/api/v1/results/race")
-async def race_results(year: int | None = None, round: int = 1):
-    """Résultats de la course pour un round donné."""
-    try:
-        return {"res": await get_race_results(year, round)}
-    except Exception as e:
-        raise HTTPException(503, f"Erreur API F1: {e}")
-
-
-@app.get("/api/v1/results/qualifying")
-async def qualifying_results(year: int | None = None, round: int = 1):
-    """Résultats des qualifications pour un round donné."""
-    try:
-        return {"qual": await get_qualifying_results(year, round)}
-    except Exception as e:
-        raise HTTPException(503, f"Erreur API F1: {e}")
-
-
-@app.get("/api/v1/results/sprint")
-async def sprint_results(year: int | None = None, round: int = 1):
-    """Résultats du sprint pour un round donné."""
-    try:
-        return {"spr": await get_sprint_results(year, round)}
     except Exception as e:
         raise HTTPException(503, f"Erreur API F1: {e}")
 
