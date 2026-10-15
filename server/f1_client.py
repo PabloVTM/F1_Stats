@@ -53,6 +53,12 @@ def _to_int(val: str) -> int:
         return 0
 
 
+def _short_name(given: str, family: str) -> str:
+    if given:
+        return f"{given[0]}. {family}"
+    return family
+
+
 # ── Calendar ──────────────────────────────────────────────────────────────────
 
 
@@ -109,37 +115,9 @@ async def get_driver_standings(
         result.append(
             {
                 "pos": _to_int(s.get("position", 0)),
-                "name": driver.get("familyName", ""),
-                "team": (s.get("Constructors") or [{}])[0].get("name", ""),
-                "pts": _to_int(s.get("points", 0)),
-            }
-        )
-    return result
-
-
-# ── Constructor Standings ─────────────────────────────────────────────────────
-
-
-async def get_constructor_standings(
-    year: int | None = None, round_num: int | None = None
-) -> list[dict[str, Any]]:
-    year = year or _current_year()
-    path = f"{year}/constructorStandings.json?limit=40"
-    if round_num:
-        path = f"{year}/{round_num}/constructorStandings.json?limit=40"
-
-    mrdata = await _fetch_mrdata(path)
-    standings = (
-        (mrdata.get("StandingsTable") or {}).get("StandingsLists") or [{}]
-    )[0].get("ConstructorStandings", [])
-
-    result = []
-    for s in standings:
-        constructor = s.get("Constructor", {})
-        result.append(
-            {
-                "pos": _to_int(s.get("position", 0)),
-                "name": constructor.get("name", ""),
+                "name": _short_name(
+                    driver.get("givenName", ""), driver.get("familyName", "")
+                ),
                 "pts": _to_int(s.get("points", 0)),
             }
         )

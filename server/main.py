@@ -7,7 +7,6 @@ from fastapi import FastAPI, HTTPException
 
 from server.f1_client import (
     get_calendar,
-    get_constructor_standings,
     get_driver_standings,
     get_qualifying_results,
     get_race_results,
@@ -49,20 +48,11 @@ async def next_weekend(year: int | None = None):
         raise HTTPException(503, f"Erreur API F1: {e}")
 
 
-@app.get("/api/v1/standings/drivers")
+@app.get("/api/v1/standings")
 async def driver_standings(year: int | None = None, round: int | None = None):
-    """Classement pilotes (position, nom, équipe, points)."""
+    """Classement pilotes (position, nom, points)."""
     try:
         return {"drv": await get_driver_standings(year, round)}
-    except Exception as e:
-        raise HTTPException(503, f"Erreur API F1: {e}")
-
-
-@app.get("/api/v1/standings/constructors")
-async def constructor_standings(year: int | None = None, round: int | None = None):
-    """Classement constructeurs (position, nom, points)."""
-    try:
-        return {"con": await get_constructor_standings(year, round)}
     except Exception as e:
         raise HTTPException(503, f"Erreur API F1: {e}")
 

@@ -28,7 +28,7 @@ def test_calendar():
 
 
 def test_driver_standings():
-    resp = client.get("/api/v1/standings/drivers")
+    resp = client.get("/api/v1/standings")
     assert resp.status_code == 200
     body = resp.json()
     assert "drv" in body
@@ -37,18 +37,12 @@ def test_driver_standings():
     assert "pos" in d
     assert "name" in d
     assert "pts" in d
+    assert "team" not in d
 
 
 def test_constructor_standings():
     resp = client.get("/api/v1/standings/constructors")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert "con" in body
-    assert len(body["con"]) > 0
-    c = body["con"][0]
-    assert "pos" in c
-    assert "name" in c
-    assert "pts" in c
+    assert resp.status_code == 404
 
 
 def test_race_results():
