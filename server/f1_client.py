@@ -63,6 +63,12 @@ def _parse_dt(date: str, time: str | None = None) -> str:
         return date
 
 
+def _short_name(given: str, family: str) -> str:
+    if given:
+        return f"{given[0]}. {family}"
+    return family
+
+
 # ── Calendar ──────────────────────────────────────────────────────────────────
 
 
@@ -152,7 +158,7 @@ async def get_driver_standings(
         result.append(
             {
                 "pos": _to_int(s.get("position", 0)),
-                "name": driver.get("familyName", ""),
+                "name": _short_name(driver.get("givenName", ""), driver.get("familyName", "")),
                 "team": (s.get("Constructors") or [{}])[0].get("name", ""),
                 "pts": _to_int(s.get("points", 0)),
             }
@@ -210,7 +216,7 @@ async def get_race_results(
             {
                 "pos": _to_int(r.get("position", 0)),
                 "code": driver.get("code", ""),
-                "name": driver.get("familyName", ""),
+                "name": _short_name(driver.get("givenName", ""), driver.get("familyName", "")),
                 "team": (r.get("Constructor") or {}).get("name", ""),
                 "grid": _to_int(r.get("grid", 0)),
                 "laps": _to_int(r.get("laps", 0)),
@@ -246,7 +252,7 @@ async def get_qualifying_results(
             {
                 "pos": _to_int(r.get("position", 0)),
                 "code": driver.get("code", ""),
-                "name": driver.get("familyName", ""),
+                "name": _short_name(driver.get("givenName", ""), driver.get("familyName", "")),
                 "team": (r.get("Constructor") or {}).get("name", ""),
                 "q1": r.get("q1", ""),
                 "q2": r.get("q2", ""),
@@ -277,7 +283,7 @@ async def get_sprint_results(
             {
                 "pos": _to_int(r.get("position", 0)),
                 "code": driver.get("code", ""),
-                "name": driver.get("familyName", ""),
+                "name": _short_name(driver.get("givenName", ""), driver.get("familyName", "")),
                 "team": (r.get("Constructor") or {}).get("name", ""),
                 "grid": _to_int(r.get("grid", 0)),
                 "laps": _to_int(r.get("laps", 0)),
