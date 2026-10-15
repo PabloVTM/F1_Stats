@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import UTC, datetime
 from typing import Any
@@ -13,7 +14,31 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://api.jolpi.ca/ergast/f1"
 TIMEOUT = httpx.Timeout(15.0)
 
-cache = TTLCache()
+cache = TTLCache(maxsize=500)
+
+_MAX_ATTEMPTS = 3
+
+_client: httpx.AsyncClient | None = None
+_inflight: dict[str, asyncio.Task[dict[str, Any]]] = {}
+
+
+class _UpstreamTemporaryError(Exception):
+    """Erreur amont transitoire (429, 5xx) — éligible au retry."""
+
+
+def _get_client() -> httpx.AsyncClient:
+    global _client
+    if _client is None:
+        _client = httpx.AsyncClient(timeout=TIMEOUT)
+    return _client
+
+
+async def close_client() -> None:
+    """Ferme le client HTTP partagé (appelé au shutdown de l'app)."""
+    global _client
+    if _client is not None:
+        await _client.aclose()
+        _client = None
 
 
 def _now() -> datetime:
@@ -28,17 +53,53 @@ def _weekend_ttl() -> int:
     return 3600 if _now().weekday() >= 4 else 86400
 
 
+async def _sleep(seconds: float) -> None:
+    await asyncio.sleep(seconds)
+
+
+async def _fetch_upstream(url: str) -> dict[str, Any]:
+    client = _get_client()
+    for attempt in range(_MAX_ATTEMPTS):
+        try:
+            resp = await client.get(url)
+            if resp.status_code == 429 or resp.status_code >= 500:
+                raise _UpstreamTemporaryError(f"HTTP {resp.status_code}")
+            resp.raise_for_status()
+            data = resp.json()
+            cache.set(url, data, ttl=_weekend_ttl())
+            return data
+        except (httpx.TransportError, _UpstreamTemporaryError) as e:
+            if attempt == _MAX_ATTEMPTS - 1:
+                logger.warning(
+                    "Erreur API amont jolpica après %d tentatives : %s (%s)",
+                    _MAX_ATTEMPTS,
+                    e,
+                    url,
+                )
+                raise
+            delay = 2**attempt
+            logger.info(
+                "API amont instable — retry %d/%d dans %ds",
+                attempt + 1,
+                _MAX_ATTEMPTS - 1,
+                delay,
+            )
+            await _sleep(delay)
+    raise RuntimeError("inatteignable")
+
+
 async def _fetch(path: str) -> dict[str, Any]:
     url = f"{BASE_URL}/{path}"
     cached = cache.get(url)
-    if cached:
+    if cached is not None:
         return cached
-    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        resp = await client.get(url)
-        resp.raise_for_status()
-        data = resp.json()
-    cache.set(url, data, ttl=_weekend_ttl())
-    return data
+    # Déduplique les appels concurrents vers la même URL (anti cache-stampede)
+    task = _inflight.get(url)
+    if task is None:
+        task = asyncio.create_task(_fetch_upstream(url))
+        _inflight[url] = task
+        task.add_done_callback(lambda _: _inflight.pop(url, None))
+    return await asyncio.shield(task)
 
 
 async def _fetch_mrdata(path: str) -> dict[str, Any]:
@@ -72,14 +133,14 @@ async def get_calendar(year: int | None = None) -> list[dict[str, Any]]:
         result.append(
             {
                 "rnd": _to_int(r.get("round", 0)),
-                "name": r.get("raceName", ""),
+                "name": (r.get("raceName") or "").strip(),
                 "date": (r.get("date") or "")[:10],
             }
         )
     return result
 
 
-# ── Current / Next Race ───────────────────────────────────────────────────────
+# ── Driver Standings ──────────────────────────────────────────────────────────
 
 
 async def get_driver_standings(
@@ -108,7 +169,3 @@ async def get_driver_standings(
             }
         )
     return result
-
-
-# ── Race Results ──────────────────────────────────────────────────────────────
-
