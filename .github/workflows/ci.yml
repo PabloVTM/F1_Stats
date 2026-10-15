@@ -23,8 +23,15 @@ jobs:
 
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Security audit (dependencies)
+        run: pip-audit
 
       - name: Run tests
         run: pytest tests/ -v
@@ -48,6 +55,21 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Build image for scan
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: f1-stats:scan
+
+      - name: Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: f1-stats:scan
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
