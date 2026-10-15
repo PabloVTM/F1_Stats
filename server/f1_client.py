@@ -53,16 +53,6 @@ def _to_int(val: str) -> int:
         return 0
 
 
-def _parse_dt(date: str, time: str | None = None) -> str:
-    if not time:
-        return date
-    try:
-        dt = datetime.fromisoformat(f"{date}T{time}")
-        return dt.isoformat()
-    except ValueError:
-        return date
-
-
 # ── Calendar ──────────────────────────────────────────────────────────────────
 
 
