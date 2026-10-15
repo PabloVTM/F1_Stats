@@ -36,17 +36,14 @@ async def calendar(year: int | None = None):
 
 @app.get("/api/v1/next")
 async def next_weekend(year: int | None = None):
-    """Prochain weekend (ou weekend en cours) avec les horaires de toutes les séances."""
+    """Prochain GP au calendrier."""
     try:
         cal = await get_calendar(year)
         now = datetime.now(UTC)
+        today = now.strftime("%Y-%m-%d")
         for r in cal:
-            try:
-                r_dt = datetime.fromisoformat(r["date"])
-                if r_dt.replace(tzinfo=UTC) > now:
-                    return {"next": r}
-            except (ValueError, TypeError):
-                continue
+            if r["date"] >= today:
+                return {"next": r}
         return {"next": cal[-1] if cal else None}
     except Exception as e:
         raise HTTPException(503, f"Erreur API F1: {e}")
