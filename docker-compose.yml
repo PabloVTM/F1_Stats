@@ -1,0 +1,9 @@
+services:
+  f1-stats:
+    image: pablovaobar/f1-stats
+    build: .
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
