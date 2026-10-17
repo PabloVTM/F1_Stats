@@ -90,7 +90,7 @@ GitHub Actions, à chaque push sur `main`, `develop/*`, `refactor/*`, `hotfix/*`
 1. **Lint** (`ruff`) + **audit de sécurité des dépendances** (`pip-audit`) + tests
 2. Build l'image Docker
 3. **Scan Trivy** — bloque si vulnérabilité CRITICAL/HIGH
-4. Push sur Docker Hub (`:<sha>`, plus `:latest` sur `main`, `:<tag>` pour les tags git)
+4. Push sur Docker Hub (`:latest` sur `main`, `:<tag>` pour les tags git, `:<sha>` sur `develop/*`, `hotfix/*` et `refactor/*`)
 
 **Secrets GitHub requis :**
 
