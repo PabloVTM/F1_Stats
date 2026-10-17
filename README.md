@@ -91,6 +91,7 @@ GitHub Actions, à chaque push sur `main`, `develop/*`, `refactor/*`, `hotfix/*`
 2. Build l'image Docker
 3. **Scan Trivy** — bloque si vulnérabilité CRITICAL/HIGH
 4. Push sur Docker Hub (`:latest` sur `main`, `:<tag>` pour les tags git, `:<sha>` sur `develop/*`, `hotfix/*` et `refactor/*`)
+5. Création automatique d'une **release GitHub** sur les tags (`latest` pour les tags finaux, **pré-release** pour les `-RC*`)
 
 **Secrets GitHub requis :**
 
